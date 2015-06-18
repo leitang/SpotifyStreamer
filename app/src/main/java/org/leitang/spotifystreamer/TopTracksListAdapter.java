@@ -15,7 +15,7 @@ import kaaes.spotify.webapi.android.models.Track;
 /**
  * Created by Lei Tang on 6/15/15.
  */
-public class TopTracksListAdapter extends ArrayAdapter<Track> {
+public class TopTracksListAdapter extends ArrayAdapter<TopTracksActivity.ParcelableTrack> {
 
     private Context context;
 
@@ -42,7 +42,7 @@ public class TopTracksListAdapter extends ArrayAdapter<Track> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ViewHolder viewHolder;
-        Track track = getItem(position);
+        TopTracksActivity.ParcelableTrack track = getItem(position);
         if (convertView == null) {
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             convertView = inflater.inflate(resource, null);
@@ -55,12 +55,11 @@ public class TopTracksListAdapter extends ArrayAdapter<Track> {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
-        viewHolder.trackName.setText(track.name);
-        viewHolder.albumName.setText(track.album.name);
+        viewHolder.trackName.setText(track.trackName);
+        viewHolder.albumName.setText(track.albumName);
 
-        if (track.album.images.size() > 0) {
-            String imageUrl = track.album.images.get(0).url;
-            Picasso.with(context).load(imageUrl).into(viewHolder.trackImage);
+        if (track.url != null) {
+            Picasso.with(context).load(track.url).into(viewHolder.trackImage);
         }
 
         return convertView;

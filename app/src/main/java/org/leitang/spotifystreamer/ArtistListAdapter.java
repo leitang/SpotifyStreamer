@@ -12,12 +12,10 @@ import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
-import kaaes.spotify.webapi.android.models.Artist;
-
 /**
  * Created by Lei Tang on 6/11/15.
  */
-public class ArtistListAdapter extends ArrayAdapter<Artist> {
+public class ArtistListAdapter extends ArrayAdapter<MainActivity.ParcelableArtist> {
 
     private Context context;
 
@@ -31,7 +29,7 @@ public class ArtistListAdapter extends ArrayAdapter<Artist> {
      *                 instantiating views.
      * @param objects  The objects to represent in the ListView.
      */
-    public ArtistListAdapter(Context context, int resource, List<Artist> objects) {
+    public ArtistListAdapter(Context context, int resource, List<MainActivity.ParcelableArtist> objects) {
         super(context, resource, objects);
         this.context = context;
         this.resource = resource;
@@ -59,7 +57,7 @@ public class ArtistListAdapter extends ArrayAdapter<Artist> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ViewHolder viewHolder;
-        Artist artist = getItem(position);
+        MainActivity.ParcelableArtist artist = getItem(position);
         if (convertView == null) {
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             convertView = inflater.inflate(resource, null);
@@ -71,9 +69,8 @@ public class ArtistListAdapter extends ArrayAdapter<Artist> {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
-        if (artist.images.size() > 0) {
-            String imageUrl = artist.images.get(0).url;
-            Picasso.with(context).load(imageUrl).into(viewHolder.ivArtist);
+        if (artist.url != null) {
+            Picasso.with(context).load(artist.url).into(viewHolder.ivArtist);
         }
 
         viewHolder.tvArtist.setText(artist.name);
@@ -85,4 +82,5 @@ public class ArtistListAdapter extends ArrayAdapter<Artist> {
         ImageView ivArtist;
         TextView tvArtist;
     }
+
 }

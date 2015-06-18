@@ -2,25 +2,28 @@ package org.leitang.spotifystreamer;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 import android.widget.ListView;
-import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
-import kaaes.spotify.webapi.android.models.Artist;
-import kaaes.spotify.webapi.android.models.ArtistsPager;
 import kaaes.spotify.webapi.android.models.Pager;
 import kaaes.spotify.webapi.android.models.Track;
 import kaaes.spotify.webapi.android.models.TracksPager;
+import retrofit.RetrofitError;
 
 public class TopTracksActivity extends AppCompatActivity {
 
     private static final String TITLE_NAME = "Top 10 Tracks";
+
+    private static final String BUNDLE_LIST_TRACK = "tracks";
 
     private Bundle bundle;
 
@@ -30,16 +33,99 @@ public class TopTracksActivity extends AppCompatActivity {
 
     private String artistName;
 
+    private ArrayList<ParcelableTrack> mTracks;
+
+    static class ParcelableTrack implements Parcelable {
+
+        String trackName;
+        String albumName;
+        String url;
+
+        public ParcelableTrack(String trackName, String albumName, String url) {
+            this.trackName = trackName;
+            this.albumName = albumName;
+            this.url = url;
+        }
+
+        protected ParcelableTrack(Parcel in) {
+            trackName = in.readString();
+            albumName = in.readString();
+            url = in.readString();
+        }
+
+        public static final Creator<ParcelableTrack> CREATOR = new Creator<ParcelableTrack>() {
+            @Override
+            public ParcelableTrack createFromParcel(Parcel in) {
+                return new ParcelableTrack(in);
+            }
+
+            @Override
+            public ParcelableTrack[] newArray(int size) {
+                return new ParcelableTrack[size];
+            }
+        };
+
+        /**
+         * Describe the kinds of special objects contained in this Parcelable's
+         * marshalled representation.
+         *
+         * @return a bitmask indicating the set of special object types marshalled
+         * by the Parcelable.
+         */
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        /**
+         * Flatten this object in to a Parcel.
+         *
+         * @param dest  The Parcel in which the object should be written.
+         * @param flags Additional flags about how the object should be written.
+         *              May be 0 or {@link #PARCELABLE_WRITE_RETURN_VALUE}.
+         */
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeString(trackName);
+            dest.writeString(albumName);
+            dest.writeString(url);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_top_tracks);
+        initViews();
         bundle = getIntent().getExtras();
         if (bundle != null) {
             artistName = bundle.getString(MainActivity.BUNDLE_ARTIST_NAME);
         }
-        initViews();
-        loadData();
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(BUNDLE_LIST_TRACK)) {
+            ArrayList<ParcelableTrack> tracks = savedInstanceState.getParcelableArrayList(BUNDLE_LIST_TRACK);
+            if (tracks != null) {
+                mTracks = tracks;
+                topTracksListAdapter.addAll(mTracks);
+                topTracksListAdapter.notifyDataSetChanged();
+            } else {
+                loadData();
+            }
+        } else {
+            loadData();
+        }
+
+    }
+
+    /**
+     * Save all appropriate fragment state.
+     *
+     * @param outState
+     */
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putParcelableArrayList(BUNDLE_LIST_TRACK, mTracks);
+        super.onSaveInstanceState(outState);
     }
 
     private void loadData() {
@@ -105,7 +191,7 @@ public class TopTracksActivity extends AppCompatActivity {
         }
     }
 
-    private class TopTracksFetcher extends AsyncTask<String, Integer, List<Track>> {
+    private class TopTracksFetcher extends AsyncTask<String, Integer, ArrayList<ParcelableTrack>> {
 
         /**
          * Override this method to perform a computation on a background thread. The
@@ -122,15 +208,22 @@ public class TopTracksActivity extends AppCompatActivity {
          * @see #publishProgress
          */
         @Override
-        protected List<Track> doInBackground(String... params) {
+        protected ArrayList<ParcelableTrack> doInBackground(String... params) {
             if (params[0] == null || params[0].equals("")) {
                 return null;
             }
-            SpotifyApi spotifyApi = new SpotifyApi();
-            SpotifyService spotifyService = spotifyApi.getService();
-            TracksPager pager = spotifyService.searchTracks(params[0]);
-            Pager<Track> trackPager = pager.tracks;
-            return trackPager.items;
+            Pager<Track> trackPager;
+            try {
+                SpotifyApi spotifyApi = new SpotifyApi();
+                SpotifyService spotifyService = spotifyApi.getService();
+                TracksPager pager = spotifyService.searchTracks(params[0]);
+                trackPager = pager.tracks;
+            } catch (RetrofitError e) {
+                e.printStackTrace();
+                return null;
+            }
+
+            return serializeTrack(trackPager.items);
         }
 
         /**
@@ -145,13 +238,37 @@ public class TopTracksActivity extends AppCompatActivity {
          * @see #onCancelled(Object)
          */
         @Override
-        protected void onPostExecute(List<Track> tracks) {
+        protected void onPostExecute(ArrayList<ParcelableTrack> tracks) {
             super.onPostExecute(tracks);
+            mTracks = tracks;
             topTracksListAdapter.clear();
             if (tracks != null) {
                 topTracksListAdapter.addAll(tracks);
             }
             topTracksListAdapter.notifyDataSetChanged();
         }
+    }
+
+    private ArrayList<ParcelableTrack> serializeTrack(List<Track> tracks) {
+        ArrayList<ParcelableTrack> parcelableTracks = new ArrayList<>();
+
+        String trackName;
+        String albumName;
+        String url;
+
+        for (Track track : tracks) {
+            trackName = track.name;
+            albumName = track.album.name;
+            if (track.album.images.size() > 0) {
+                url = track.album.images.get(0).url;
+            } else {
+                url = null;
+            }
+
+            ParcelableTrack parcelableTrack = new ParcelableTrack(trackName, albumName, url);
+            parcelableTracks.add(parcelableTrack);
+        }
+
+        return parcelableTracks;
     }
 }
