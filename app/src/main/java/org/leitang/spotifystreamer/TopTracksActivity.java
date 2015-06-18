@@ -7,11 +7,15 @@ import android.os.Parcelable;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import butterknife.ButterKnife;
+import butterknife.InjectView;
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Pager;
@@ -21,13 +25,15 @@ import retrofit.RetrofitError;
 
 public class TopTracksActivity extends AppCompatActivity {
 
+    @InjectView(R.id.pb_loading) ProgressBar progressBar;
+
+    @InjectView(R.id.lv_tracks) ListView lvTracks;
+
     private static final String TITLE_NAME = "Top 10 Tracks";
 
     private static final String BUNDLE_LIST_TRACK = "tracks";
 
     private Bundle bundle;
-
-    private ListView lvTracks;
 
     private TopTracksListAdapter topTracksListAdapter;
 
@@ -96,6 +102,7 @@ public class TopTracksActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_top_tracks);
+        ButterKnife.inject(this);
         initViews();
         bundle = getIntent().getExtras();
         if (bundle != null) {
@@ -142,7 +149,6 @@ public class TopTracksActivity extends AppCompatActivity {
     }
 
     private void initListView() {
-        lvTracks = (ListView) findViewById(R.id.lv_tracks);
         topTracksListAdapter = new TopTracksListAdapter(this, R.layout.item_top_track);
         lvTracks.setAdapter(topTracksListAdapter);
     }
@@ -227,6 +233,19 @@ public class TopTracksActivity extends AppCompatActivity {
         }
 
         /**
+         * Runs on the UI thread before {@link #doInBackground}.
+         *
+         * @see #onPostExecute
+         * @see #doInBackground
+         */
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progressBar.setVisibility(View.VISIBLE);
+
+        }
+
+        /**
          * <p>Runs on the UI thread after {@link #doInBackground}. The
          * specified result is the value returned by {@link #doInBackground}.</p>
          * <p/>
@@ -240,6 +259,7 @@ public class TopTracksActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(ArrayList<ParcelableTrack> tracks) {
             super.onPostExecute(tracks);
+            progressBar.setVisibility(View.GONE);
             mTracks = tracks;
             topTracksListAdapter.clear();
             if (tracks != null) {
