@@ -13,6 +13,7 @@ import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -262,8 +263,10 @@ public class MainActivity extends AppCompatActivity implements TextWatcher, Adap
             pbLoading.setVisibility(View.GONE);
             parcelableArtistList = artists;
             artistListAdapter.clear();
-            if (artists != null) {
+            if (artists != null && artists.size() > 0) {
                 artistListAdapter.addAll(artists);
+            } else {
+                Toast.makeText(MainActivity.this, "Try some word else", Toast.LENGTH_SHORT).show();
             }
             artistListAdapter.notifyDataSetChanged();
 
